@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Water Motor Control PWA</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b1220">
+<style>
+:root{--bg:#0b1220;--p:#131c2e;--p2:#1a2540;--ln:#263353;--tx:#e8edf7;--mu:#8b9abb;--am:#f5a623;--gr:#22c55e;--rd:#ef4444;--bl:#38bdf8}
+.light-mode{--bg:#f0f4f8;--p:#ffffff;--p2:#e2e8f0;--ln:#cbd5e1;--tx:#1e293b;--mu:#64748b;--am:#d97706;--gr:#16a34a;--rd:#dc2626;--bl:#0284c7}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(circle at 20% 0,var(--p2),var(--bg) 60%) fixed;color:var(--tx);min-height:100vh;padding:14px}
+button,input,select{font:inherit;color:inherit}button{cursor:pointer;border:0}
+.hide{display:none!important}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--p);border:1px solid var(--ln);border-radius:14px;padding:16px}
+h1{font-size:20px}h3{font-size:13px;letter-spacing:.8px;color:var(--mu);margin-bottom:12px;font-weight:700}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.sp{justify-content:space-between}
+.btn{padding:11px 18px;border-radius:10px;font-weight:700;background:var(--p2);border:1px solid var(--ln);transition:.15s}
+.btn:hover{filter:brightness(1.2)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.b-on{background:var(--gr);color:#04210f}.b-off{background:var(--rd);color:#fff}.b-am{background:var(--am);color:#2b1a00}
+input,select{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:9px 10px;outline:none}
+input:focus,select:focus{border-color:var(--am)}
+/* system bar */
+.sysbar{position:sticky;top:8px;z-index:50;display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:14px;background:var(--p2);border:1px solid var(--ln);box-shadow:0 8px 24px #0006}
+.sysbar .dot{width:12px;height:12px;border-radius:50%;background:var(--rd)}.sysbar.ok .dot{background:var(--gr);box-shadow:0 0 10px var(--gr)}
+.sysbar .txt{flex:1;font-weight:600;font-size:14px;min-width:0}.sysbar small{display:block;color:var(--mu);font-weight:400;font-size:12px}
+/* connection */
+.conn{background:linear-gradient(135deg,var(--p2),#131c2e 70%);border-color:var(--ln)}
+.conn .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.kv{background:var(--bg);border:1px solid var(--ln);border-radius:8px;padding:8px 10px}.kv span{display:block;font-size:11px;color:var(--mu)}.kv b{font-size:14px}
+.term{background:var(--bg);color:var(--gr);font:12px monospace;border-radius:8px;padding:8px 10px;min-height:36px;max-height:80px;overflow:auto;flex:1;min-width:160px;border:1px solid var(--ln)}
+/* voltage */
+.volt{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.ph{border-radius:12px;padding:12px 8px;text-align:center;background:var(--bg);border:2px solid var(--c);position:relative}
+.ph .n{font-weight:800;color:var(--c);font-size:13px}.ph .v{font-size:26px;font-weight:800;margin:4px 0;min-height:34px}.ph .u{font-size:11px;color:var(--mu)}
+.ph .v.no{font-size:12px;font-weight:600;color:var(--mu);padding-top:8px}
+.ph .bar{height:5px;background:var(--p2);border-radius:3px;margin-top:6px;overflow:hidden}.ph .bar i{display:block;height:100%;width:0;background:var(--c);transition:width .5s}
+/* metrics */
+.met{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.gauge{position:relative;width:130px;height:130px;margin:0 auto}.gauge svg{transform:rotate(-90deg)}
+.gauge .c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gauge .c b{font-size:24px}.gauge .c small{color:var(--mu);font-size:11px}
+.ring{fill:none;stroke-width:10;stroke-linecap:round}
+.rt{font:800 30px monospace;text-align:center;margin:10px 0 6px;color:var(--bl)}
+.rtbar{height:8px;background:var(--p2);border-radius:4px;overflow:hidden}.rtbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--bl),var(--gr));transition:width 1s}
+.cap{text-align:center;color:var(--mu);font-size:11px;margin-top:6px}
+/* smart */
+.sw{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer}
+.sw input{display:none}.sw i{width:46px;height:26px;border-radius:13px;background:var(--mu);position:relative;transition:.2s}
+.sw i:after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.2s}
+.sw input:checked+i{background:var(--am)}.sw input:checked+i:after{left:23px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:560px){.tgrid,.met{grid-template-columns:1fr}}
+.tb label{display:block;font-size:12px;color:var(--mu);margin-bottom:5px;font-weight:600}
+.tbox{display:flex;gap:4px;align-items:center}.tbox input[type=number]{width:56px;text-align:center;padding:9px 4px}
+.tbox select{padding:9px 6px}
+.work{margin-top:12px;display:flex;justify-content:space-between;align-items:center;background:var(--bg);border:1px dashed var(--am);border-radius:10px;padding:12px 14px}
+.work b{font-size:20px;color:var(--am)}
+.opt{margin-top:12px;display:flex;flex-direction:column;gap:10px;font-size:13px}.opt label{display:flex;gap:8px;align-items:center}
+.opt input[type=number]{width:70px}
+/* control */
+.mstat{display:flex;align-items:center;gap:14px;padding:14px;border-radius:12px;background:var(--bg);border:1px solid var(--ln);margin-bottom:12px}
+.mstat.on{border-color:var(--gr);background:rgba(34,197,94,.12)}
+.gear{font-size:38px;display:inline-block}.mstat.on .gear{animation:spin 2s linear infinite}
+.mstat b{font-size:16px}.mstat small{display:block;color:var(--mu)}
+.ctl{display:grid;grid-template-columns:1fr 1fr;gap:10px}.ctl .btn{padding:14px}.ctl .full{grid-column:1/-1}
+.spin{animation:spin .6s linear 1}.flash{animation:flash .8s}
+@keyframes spin{to{transform:rotate(360deg)}}@keyframes flash{0%{box-shadow:0 0 0 0 #38bdf8}100%{box-shadow:0 0 0 18px #38bdf800}}
+.pw{display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;background:var(--bg);margin-top:12px}
+.pw .d{width:12px;height:12px;border-radius:50%;background:var(--mu)}.pw.ok .d{background:var(--gr)}.pw.cut .d{background:var(--rd)}
+/* modal */
+.mod{position:fixed;inset:0;background:#000a;z-index:100;display:none;align-items:center;justify-content:center;padding:14px}.mod.show{display:flex}
+.box{width:100%;max-width:820px;max-height:90vh;overflow:auto;background:var(--p);border:1px solid var(--ln);border-radius:14px}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;position:sticky;top:0;background:var(--p2);border-bottom:1px solid var(--ln);z-index:2}
+.x{width:46px;height:34px;background:#e81123;color:#fff;font-size:18px;border-radius:6px}.x:hover{background:#c50f1f}
+.mb{padding:16px}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:760px}th,td{padding:8px;border-bottom:1px solid var(--ln);text-align:center;white-space:nowrap}th{background:var(--p2);color:var(--am);position:sticky;top:0}
+.tw{overflow:auto;max-height:55vh;border:1px solid var(--ln);border-radius:8px}
+.fg{margin-bottom:12px}.fg label{display:block;font-size:12px;color:var(--mu);margin-bottom:4px}.fg input,.fg select{width:100%}
+.tabs{display:flex;gap:8px;margin-bottom:14px}.tab{padding:8px 14px;border-radius:8px;background:var(--p2)}.tab.on{background:var(--am);color:#2b1a00;font-weight:700}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#7c2d12;border:1px solid var(--am);padding:12px 18px;border-radius:10px;z-index:300;max-width:90vw;display:none;box-shadow:0 8px 30px #000a}
+.toast.show{display:block}.toast.g{background:#14532d;border-color:var(--gr)}
+.cmdout{background:var(--bg);color:var(--gr);font:12px/1.5 monospace;padding:10px;border-radius:8px;height:200px;overflow:auto;white-space:pre-wrap;margin:10px 0}
+/* login */
+#login{position:fixed;inset:0;z-index:500;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+.light-mode{--bg:#fff7ed;--p:#ffffff;--p2:#ffedd5;--ln:#fdba74;--tx:#431407;--mu:#9a5b36;--am:#ea580c;--gr:#16a34a;--rd:#dc2626;--bl:#c2410c}
+body.light-mode{background:linear-gradient(180deg,#ffd9b0 0,#fff4e6 280px,#ffe6cc 100%) fixed}
+body.light-mode:before{content:"";position:fixed;left:0;right:0;bottom:0;height:170px;z-index:-1;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 160' preserveAspectRatio='none'%3E%3Cpath d='M0 70 C200 10 400 130 600 70 S1000 10 1200 70 V160 H0Z' fill='%23fdba74' fill-opacity='.5'/%3E%3Cpath d='M0 105 C250 55 450 150 700 100 S1050 65 1200 105 V160 H0Z' fill='%23fb923c' fill-opacity='.4'/%3E%3C/svg%3E") bottom/100% 100% no-repeat}
+body.light-mode header{position:relative;overflow:hidden;padding:16px 18px;border-radius:16px;color:#fff;background:linear-gradient(120deg,#fb923c,#ea580c 55%,#c2410c);box-shadow:0 10px 26px rgba(234,88,12,.35)}
+body.light-mode header:before{content:"";position:absolute;right:-40px;top:-50px;width:190px;height:190px;border-radius:50%;background:rgba(255,255,255,.16)}
+body.light-mode header:after{content:"";position:absolute;right:70px;bottom:-60px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12)}
+body.light-mode header>*{position:relative;z-index:1}body.light-mode header small{color:#ffe7d1!important}
+body.light-mode header .btn{background:rgba(255,255,255,.2);color:#fff;border-color:rgba(255,255,255,.45)}
+body.light-mode .card{background:linear-gradient(180deg,#fff,#fffaf4);border:1px solid #fed7aa;border-top:4px solid var(--am);box-shadow:0 8px 22px rgba(234,88,12,.13)}
+body.light-mode h3{color:#c2410c}
+body.light-mode .sysbar{background:linear-gradient(90deg,#fff,#ffe9d2);border-color:#fdba74;box-shadow:0 6px 18px rgba(234,88,12,.2)}
+body.light-mode .btn{background:#fff;color:#7c2d12;border-color:#fdba74}
+body.light-mode .b-am{background:linear-gradient(135deg,#fb923c,#ea580c);color:#fff;border-color:#ea580c}
+body.light-mode .b-on{background:linear-gradient(135deg,#22c55e,#15803d);color:#fff}body.light-mode .b-off{background:linear-gradient(135deg,#ef4444,#b91c1c);color:#fff}
+body.light-mode .tab{background:#ffedd5}body.light-mode .tab.on{background:var(--am);color:#fff}
+body.light-mode .mh{background:linear-gradient(90deg,#fb923c,#ea580c);color:#fff;border-color:#ea580c}
+body.light-mode .conn{background:linear-gradient(135deg,#ffedd5,#fff 70%)}
+body.light-mode #login{background:linear-gradient(135deg,#fed7aa,#fff7ed)}
+body.hi{font-family:"Noto Sans Devanagari","Nirmala UI","Mangal","Kohinoor Devanagari","Segoe UI",system-ui,sans-serif}body.hi .btn,body.hi h3{line-height:1.5}
+</style></head><body>
+
+<div id="login"><form class="card" id="lf" style="width:100%;max-width:360px">
+<h1 style="margin-bottom:4px">Water Motor Control</h1><p style="color:var(--mu);font-size:13px;margin-bottom:14px">Sign in to continue (Default: admin / admin123)</p>
+<div class="fg"><label>Username</label><input id="lu" required autocomplete="username" value="admin"></div>
+<div class="fg"><label>Password</label><input id="lp" type="password" required autocomplete="current-password" value="admin123"></div>
+<p id="le" class="hide" style="color:var(--rd);font-size:13px;margin-bottom:8px">Wrong username or password.</p>
+<button class="btn b-am" style="width:100%">Sign in</button></form></div>
+
+<div class="wrap">
+<header class="row sp"><div><h1>Water Motor Control</h1><small style="color:var(--mu)">3-Phase Smart Panel</small></div>
+<div class="row"><button class="btn" id="langBtn">हिं</button><button class="btn" id="themeBtn">🌓 Theme</button><button class="btn" id="logout">Logout</button></div></header>
+
+<!-- Step 7: system status -->
+<div class="sysbar" id="sysbar"><span class="dot"></span><div class="txt" id="sysTxt">Connecting…<small id="sysSub">Waiting for first reading</small></div>
+<button class="btn b-am" id="openConsole">Motor Console</button></div>
+
+<div class="card" id="faultBox" style="display:none;border-color:var(--rd);background:rgba(239,68,68,.12)"><b>⚠ <span id="faultTxt">Fault</span></b></div>
+
+<!-- Step 2: connection -->
+<section class="card conn"><h3>DEVICE CONNECTION & WIFI CONFIG</h3>
+<div class="grid"><div class="kv"><span>Device</span><b id="cName">Water Motor 1</b></div><div class="kv"><span>IP address</span><b id="cIp">192.168.1.100</b></div></div>
+<div class="row"><select id="testSel"><option value="/api/hello">Test: Hello</option><option value="/status">Test: Status</option></select>
+<button class="btn" id="testBtn">Send</button><a href="http://192.168.4.1" target="_blank" class="btn b-am" style="text-decoration:none">Wi-Fi Config Portal</a><div class="term" id="term">Response: waiting…</div></div></section>
+
+<!-- Step 3: voltage -->
+<section class="card"><h3>VOLTAGE MONITORING</h3><div class="volt">
+<div class="ph" style="--c:#ff5a5a"><div class="n">Phase R</div><div class="v no" id="vR">No data</div><div class="u">Volts</div><div class="bar"><i id="bR"></i></div></div>
+<div class="ph" style="--c:#facc15"><div class="n">Phase Y</div><div class="v no" id="vY">No data</div><div class="u">Volts</div><div class="bar"><i id="bY"></i></div></div>
+<div class="ph" style="--c:#38bdf8"><div class="n">Phase B</div><div class="v no" id="vB">No data</div><div class="u">Volts</div><div class="bar"><i id="bB"></i></div></div></div></section>
+
+<!-- Step 4 -->
+<div class="met">
+<section class="card"><h3>MOTOR CURRENT</h3><div class="gauge"><svg width="130" height="130"><circle class="ring" cx="65" cy="65" r="54" stroke="var(--ln)"/><circle class="ring" id="gArc" cx="65" cy="65" r="54" stroke="#f5a623" stroke-dasharray="339" stroke-dashoffset="339" style="transition:stroke-dashoffset .6s"/></svg>
+<div class="c"><b id="curV">--</b><small id="curU">No data</small></div></div></section>
+<section class="card"><h3>TOTAL RUNTIME</h3><div class="rt" id="rtV">00:00:00</div><div class="rtbar"><i id="rtBar"></i></div><div class="cap" id="rtCap">Counting stopped</div></section></div>
+
+<section class="card"><h3>LIVE TREND</h3><canvas id="trend" width="680" height="150" style="width:100%;height:150px"></canvas><div class="cap">R / Y / B voltage (0–300 V) and current in amber (0–25 A) · this session</div></section>
+<section class="card"><h3>ENERGY & MAINTENANCE</h3><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><div class="kv"><span>Energy used (est.)</span><b id="eKwh">0</b> kWh</div><div class="kv"><span>Electricity cost</span><b id="eCost">0</b></div><div class="kv"><span>Lifetime run hours</span><b id="eHrs">0</b></div><div class="kv"><span>Next service</span><b id="eSvc">--</b></div></div><button class="btn" style="margin-top:10px" id="svcRst">Service done — reset counter</button></section>
+<!-- Step 5 -->
+<section class="card"><div class="row sp"><label class="sw"><input type="checkbox" id="smartTg"><i></i>SMART MODE</label><small style="color:var(--mu)" id="smartHint">Off: motor follows Start / Stop</small></div>
+<div id="smartBox" class="hide">
+<div class="tgrid"><div class="tb"><label>Start time</label><div class="tbox" id="stBox"></div></div><div class="tb"><label>Stop time</label><div class="tbox" id="enBox"></div></div></div>
+<div class="work"><span>Total working hours</span><b id="workV">--</b></div>
+<div class="opt"><label><input type="checkbox" id="resume"> Complete full run time even after power cuts (restart motor when power returns)</label>
+<label><input type="checkbox" id="intTg"> Interval schedule: run every <input type="number" id="intDays" min="1" max="30" value="1"> day(s)</label></div></div></section>
+
+<!-- Step 6: single control -->
+<section class="card"><h3>MOTOR CONTROL</h3>
+<div class="mstat" id="mstat"><span class="gear">⚙️</span><div><b id="mTxt">Motor is OFF</b><small id="mSub">Ready</small></div></div>
+<div class="ctl"><button class="btn b-on" id="startBtn">START</button><button class="btn b-off" id="stopBtn">STOP</button><button class="btn b-am full" id="refBtn">Refresh Data</button></div>
+<div class="pw" id="pw"><span class="d"></span><div><b id="pwTxt">Mains power: unknown</b><small style="display:block;color:var(--mu)" id="pwSub"></small></div></div></section>
+
+<div class="row"><button class="btn" style="flex:1" id="setBtn">⚙ Settings</button><button class="btn" style="flex:1" id="hisBtn">📊 History & Logs</button></div>
+</div>
+
+<!-- Settings popup -->
+<div class="mod" id="setMod"><div class="box" style="max-width:480px"><div class="mh"><b>Settings</b><button class="x" data-close="setMod">✕</button></div><div class="mb">
+<div class="tabs"><button class="tab on" data-t="t1">Device</button><button class="tab" data-t="t2">Account</button><button class="tab" data-t="t3">Protection</button></div>
+<div id="t1"><div class="fg"><label>Device name</label><input id="sName"></div><div class="fg"><label>Device IP address</label><input id="sIp"></div>
+<div class="fg"><label>Status check interval (seconds)</label><input id="sPoll" type="number" min="2" max="60"></div></div>
+<div id="t2" class="hide"><div class="fg"><label>Username</label><input id="sUser"></div><div class="fg"><label>New password (blank = keep)</label><input id="sPass" type="password"></div><div class="fg"><label>Confirm password</label><input id="sPass2" type="password"></div></div>
+<div id="t3" class="hide"><div class="fg"><label>Low voltage cut-off (V)</label><input id="pMin" type="number"></div><div class="fg"><label>High voltage cut-off (V)</label><input id="pMax" type="number"></div><div class="fg"><label>Max phase imbalance (%)</label><input id="pImb" type="number"></div><div class="fg"><label>Dry-run current below (A)</label><input id="pDry" type="number" step="0.1"></div><div class="fg"><label>Overload current above (A)</label><input id="pOver" type="number" step="0.1"></div><div class="fg"><label>Electricity rate (₹ per kWh)</label><input id="pTar" type="number" step="0.1"></div><div class="fg"><label>Service every (run hours)</label><input id="pSvc" type="number"></div></div>
+<button class="btn b-on" style="width:100%" id="saveSet">Save settings</button></div></div></div>
+
+<!-- History -->
+<div class="mod" id="hisMod"><div class="box"><div class="mh"><b>History & Logs</b><button class="x" data-close="hisMod">✕</button></div><div class="mb">
+<div class="tw"><table><thead><tr><th>Date & Time</th><th>Event</th><th>Motor start</th><th>Motor stop</th><th>Power cut</th><th>Power restore</th><th>R-Volt</th><th>Y-Volt</th><th>B-Volt</th><th>Current (Amp)</th><th>Total run time</th></tr></thead><tbody id="hBody"></tbody></table></div>
+<div class="row" style="margin-top:12px"><button class="btn b-on" id="csvBtn">Download CSV</button><button class="btn" id="clrBtn">Clear logs</button></div></div></div></div>
+
+<!-- Console -->
+<div class="mod" id="conMod"><div class="box" style="max-width:560px"><div class="mh"><b>Motor Console</b><button class="x" data-close="conMod">✕</button></div><div class="mb">
+<div class="kv" id="conStat" style="white-space:pre-line;line-height:1.7"></div>
+<div class="cmdout" id="cmdOut">Type "help" for commands.</div>
+<div class="row"><input id="cmdIn" style="flex:1" placeholder="CMD> help" autocomplete="off"><button class="btn b-am" id="cmdGo">Run</button></div></div></div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id),pad=n=>String(n).padStart(2,"0");
+const KEY="mc_v2";
+const D={lim:{minV:180,maxV:260,imb:15,dry:1.5,over:15,tariff:6,svc:500},kwh:0,totMs:0,svcAt:0,name:"Water Motor 1",ip:"192.168.1.100",poll:5,user:"admin",pass:"admin123",auth:false,smart:false,
+ st:{h:8,m:0,s:0,ap:"PM"},en:{h:4,m:0,s:0,ap:"AM"},resume:false,intOn:false,intDays:1,armed:false,anchor:"",
+ runMs:0,runDay:"",sRunMs:0,sKey:"",lastOk:0,logs:[],pwOk:null,pwSince:0,darkMode:true,lang:"en"};
+let S=Object.assign({},D);
+try{Object.assign(S,JSON.parse(localStorage.getItem(KEY)||"{}"))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const HI={"3-Phase Smart Panel": "3-Phase स्मार्ट पैनल", "Logout": "लॉग आउट", "🌓 Theme": "🌓 थीम", "Motor Console": "Motor कंसोल", "DEVICE CONNECTION & WIFI CONFIG": "डिवाइस कनेक्शन और WiFi कॉन्फ़िग", "Device": "डिवाइस", "IP address": "IP एड्रेस", "Test: Hello": "टेस्ट: Hello", "Test: Status": "टेस्ट: Status", "Send": "भेजें", "Wi-Fi Config Portal": "Wi-Fi कॉन्फ़िग पोर्टल", "Response: waiting…": "जवाब: इंतज़ार है…", "VOLTAGE MONITORING": "Voltage मॉनिटरिंग", "Volts": "वोल्ट", "No data": "डेटा नहीं", "MOTOR CURRENT": "Motor Current (करंट)", "Amps": "एम्पीयर", "TOTAL RUNTIME": "कुल Runtime (चलने का समय)", "Counting stopped": "गिनती रुकी है", "Counting · verified with ESP32 every 15 min": "गिनती जारी · हर 15 मिनट में ESP32 से जाँच", "LIVE TREND": "लाइव ट्रेंड", "R / Y / B voltage (0–300 V) and current in amber (0–25 A) · this session": "R / Y / B Voltage (0–300 V) और Current नारंगी में (0–25 A) · इस सेशन का", "ENERGY & MAINTENANCE": "बिजली खपत और रखरखाव", "Energy used (est.)": "बिजली खपत (अनुमानित)", "Electricity cost": "बिजली का खर्च", "Lifetime run hours": "कुल चलने के घंटे", "Next service": "अगली सर्विस", "Service done — reset counter": "सर्विस हो गई — काउंटर रीसेट करें", "h left": "घंटे बाकी", "Service due!": "सर्विस का समय हो गया!", "SMART MODE": "SMART MODE (स्मार्ट मोड)", "Off: motor follows Start / Stop": "बंद: Motor, Start / Stop से चलेगी", "Schedule runs motor automatically": "Schedule से Motor अपने आप चलेगी", "Start time": "चालू होने का समय", "Stop time": "बंद होने का समय", "Total working hours": "कुल काम के घंटे", "Complete full run time even after power cuts (restart motor when power returns)": "Light जाने पर भी पूरा run time पूरा करें (Light आते ही Motor फिर चालू)", "Interval schedule: run every": "Interval schedule: हर", "day(s)": "दिन में चलाएँ", "MOTOR CONTROL": "Motor कंट्रोल", "Motor is OFF": "Motor बंद है", "Motor is RUNNING": "Motor चालू है", "Ready": "तैयार", "Running · Smart Mode": "चालू · Smart Mode", "Running · Manual": "चालू · Manual", "START": "START (चालू करें)", "STOP": "STOP (बंद करें)", "START (set up first)": "START (पहले सेटअप करें)", "SCHEDULE ARMED": "SCHEDULE तैयार है", "START SCHEDULE": "SCHEDULE शुरू करें", "Refresh Data": "Data रीफ्रेश करें", "Mains power: unknown": "Mains Power: पता नहीं", "Mains power:": "Mains Power:", "Available": "उपलब्ध", "Not available": "उपलब्ध नहीं", "unknown": "पता नहीं", "Since ": "से ", "Cut at ": "कटी: ", "⚙ Settings": "⚙ सेटिंग्स", "📊 History & Logs": "📊 History और Logs", "Settings": "सेटिंग्स", "History & Logs": "History और Logs", "Account": "अकाउंट", "Protection": "सुरक्षा (Protection)", "Device name": "डिवाइस का नाम", "Device IP address": "डिवाइस का IP एड्रेस", "Status check interval (seconds)": "Status जाँच का अंतराल (सेकंड)", "Username": "यूज़रनेम", "Password": "पासवर्ड", "New password (blank = keep)": "नया पासवर्ड (खाली = वही रहेगा)", "Confirm password": "पासवर्ड कन्फ़र्म करें", "Low voltage cut-off (V)": "Low voltage कट-ऑफ (V)", "High voltage cut-off (V)": "High voltage कट-ऑफ (V)", "Max phase imbalance (%)": "अधिकतम Phase असंतुलन (%)", "Dry-run current below (A)": "Dry-run: Current इससे कम (A)", "Overload current above (A)": "Overload: Current इससे ज़्यादा (A)", "Electricity rate (₹ per kWh)": "बिजली की दर (₹ प्रति kWh)", "Service every (run hours)": "हर कितने घंटे पर सर्विस", "Save settings": "सेटिंग्स सेव करें", "Date & Time": "तारीख और समय", "Event": "घटना", "Motor start": "Motor चालू", "Motor stop": "Motor बंद", "Power cut": "Light गई", "Power restore": "Light आई", "Current (Amp)": "Current (Amp)", "Total run time": "कुल run time", "Download CSV": "CSV डाउनलोड करें", "Clear logs": "Logs साफ़ करें", "No activity recorded yet.": "अभी कोई गतिविधि दर्ज नहीं है।", "Sign in to continue (Default: admin / admin123)": "आगे बढ़ने के लिए साइन इन करें (Default: admin / admin123)", "Sign in": "साइन इन", "Wrong username or password.": "यूज़रनेम या पासवर्ड गलत है।", "Run": "चलाएँ", "System online": "सिस्टम ऑनलाइन", "RUNNING": "चालू", "STOPPED": "बंद", "OFF": "बंद", "OK": "ठीक", "Device offline (Check WiFi) — retrying…": "डिवाइस ऑफ़लाइन (WiFi चेक करें) — दोबारा कोशिश हो रही है…", "Connecting…": "कनेक्ट हो रहा है…", "Waiting for first reading": "पहली रीडिंग का इंतज़ार", "Smart Mode armed": "Smart Mode तैयार", "Smart Mode not armed": "Smart Mode तैयार नहीं", "Manual control": "Manual कंट्रोल", "Last update": "आख़िरी अपडेट", "motor start blocked": "Motor चालू नहीं होगी", "Fault reported by ESP32": "ESP32 ने Fault बताया", "Phase failure": "Phase फेल", "Low voltage": "Low Voltage", "High voltage": "High Voltage", "Phase imbalance": "Phase असंतुलन", "Overload": "Overload", "Dry run (low current)": "Dry run (Current कम)", "Motor started": "Motor चालू हुई", "Motor stopped": "Motor बंद हुई", "Start pressed": "Start दबाया", "Stop pressed": "Stop दबाया", "Power restored": "Light आ गई", "Manual refresh": "Manual रीफ्रेश", "Smart: start": "Smart: चालू", "Smart: stop": "Smart: बंद", "Smart schedule armed": "Smart schedule तैयार", "Refresh failed: device offline": "रीफ्रेश नहीं हुआ: डिवाइस ऑफ़लाइन है", "Data refreshed": "Data रीफ्रेश हो गया", "Settings saved": "सेटिंग्स सेव हो गईं", "Service counter reset": "सर्विस काउंटर रीसेट हुआ", "Device not reachable. Check IP / Wi-Fi.": "डिवाइस नहीं मिला। IP / Wi-Fi जाँचें।", "Dark Mode Enabled": "Dark Mode चालू", "Light Mode Enabled": "Light Mode चालू", "Passwords do not match": "पासवर्ड मेल नहीं खाते"};
+const t=s=>{if(S.lang!=="hi")return s;if(HI[s])return HI[s];const m=/^(ALARM|TRIP): (.*)$/.exec(s);return m?(m[1]==="ALARM"?"अलार्म: ":"ट्रिप: ")+(HI[m[2]]||m[2]):s};
+const OR=new Map();
+function xlate(){const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT),L=[];let n;while(n=w.nextNode())L.push(n);
+ L.forEach(n=>{if(n.parentNode.tagName==="SCRIPT")return;const o=OR.get(n),en=o?o.en:n.nodeValue,k=en.trim();if(!k||(!o&&!HI[k]))return;OR.set(n,{en});n.nodeValue=S.lang==="hi"&&HI[k]?en.replace(k,HI[k]):en})}
+function applyLang(){document.body.classList.toggle("hi",S.lang==="hi");$("langBtn").textContent=S.lang==="hi"?"EN":"हिं";xlate();if(started){render();renderLogs()}}
+$("langBtn").onclick=()=>{S.lang=S.lang==="hi"?"en":"hi";save();applyLang()};
+function applyTheme(){document.body.classList.toggle("light-mode",!S.darkMode);const m=document.querySelector("meta[name=theme-color]");if(m)m.content=S.darkMode?"#0b1220":"#f0f4f8"}
+applyTheme();
+$("themeBtn").onclick=()=>{S.darkMode=!S.darkMode;applyTheme();save();toast(S.darkMode?"Dark Mode Enabled":"Light Mode Enabled",1)};
+let T={motorSince:0,alarm:"",smp:[],tripping:0,n:0,motor:false,online:false,busy:false,data:{},lastCmd:0,lastTick:Date.now(),lastRtPoll:0};
+
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtHMS=ms=>{ms=Math.max(0,Math.floor(ms/1000));return pad(Math.floor(ms/3600))+":"+pad(Math.floor(ms%3600/60))+":"+pad(ms%60)};
+const nowStr=()=>new Date().toLocaleString("en-GB",{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:true});
+function toast(m,g){const e=$("toast");e.textContent=t(m);e.className="toast show"+(g?" g":"");clearTimeout(toast.t);toast.t=setTimeout(()=>e.className="toast",3000)}
+
+/* ---------- time inputs ---------- */
+function buildT(boxId,k){const b=$(boxId),v=S[k];
+ b.innerHTML=`<input type="number" min="1" max="12" data-f="h" value="${pad(v.h)}"><b>:</b><input type="number" min="0" max="59" data-f="m" value="${pad(v.m)}"><b>:</b><input type="number" min="0" max="59" data-f="s" value="${pad(v.s)}"><select data-f="ap"><option>AM</option><option>PM</option></select>`;
+ b.querySelector("select").value=v.ap;
+ b.querySelectorAll("input,select").forEach(el=>el.addEventListener("input",()=>{const f=el.dataset.f;
+  if(f==="ap")v.ap=el.value;else{let n=parseInt(el.value);const mx=f==="h"?12:59,mn=f==="h"?1:0;if(isNaN(n))n=mn;n=Math.min(mx,Math.max(mn,n));v[f]=n}
+  smartChanged()}));
+ b.querySelectorAll("input").forEach(el=>el.addEventListener("blur",()=>el.value=pad(v[el.dataset.f])))}
+const toSec=t=>((t.h%12)+(t.ap==="PM"?12:0))*3600+t.m*60+t.s;
+const winSec=()=>{let d=toSec(S.en)-toSec(S.st);if(d<=0)d+=86400;return d};
+function missing(){const m=[];if(!(S.st.h>=1))m.push("start time");if(!(S.en.h>=1))m.push("stop time");
+ if(toSec(S.st)===toSec(S.en))m.push("different start & stop time");if(S.intOn&&!(S.intDays>=1))m.push("interval days");return m}
+function smartChanged(){if(S.armed){S.armed=false;toast("Schedule changed — press Start to re-arm.")}
+ $("workV").textContent=toSec(S.st)===toSec(S.en)?"--":fmtHMS(winSec()*1000).slice(0,5).replace(":","h ")+"m";save();render()}
+
+/* ---------- logging ---------- */
+function addLog(ev,x={}){const d=T.data;S.logs.unshift(Object.assign({t:nowStr(),ev,vr:d.vr??"",vy:d.vy??"",vb:d.vb??"",cur:d.current??"",run:fmtHMS(S.runMs)},x));
+ if(S.logs.length>500)S.logs.length=500;save();renderLogs()}
+function renderLogs(){$("hBody").innerHTML=S.logs.length?S.logs.map(l=>`<tr><td>${l.t}</td><td>${t(l.ev)}</td><td>${l.start||"-"}</td><td>${l.stop||"-"}</td><td>${l.cut||"-"}</td><td>${l.rest||"-"}</td><td>${l.vr!==""?l.vr+" V":"-"}</td><td>${l.vy!==""?l.vy+" V":"-"}</td><td>${l.vb!==""?l.vb+" V":"-"}</td><td>${l.cur!==""?l.cur+" A":"-"}</td><td>${l.run}</td></tr>`).join(""):`<tr><td colspan="11">${t("No activity recorded yet.")}</td></tr>`}
+
+/* ---------- ESP communication (single-flight, timeout = no hang) ---------- */
+async function esp(path,quiet){
+ const url="http://"+S.ip+path,c=new AbortController(),to=setTimeout(()=>c.abort(),3000);
+ try{const r=await fetch(url,{cache:"no-store",signal:c.signal});if(!r.ok)throw 0;const tx=(await r.text()).trim();clearTimeout(to);
+  if(!quiet)$("term").textContent="Response: "+tx;return tx}
+ catch(e){clearTimeout(to);if(!quiet)$("term").textContent="Error: Device unreachable (Check WiFi/AP)";throw e}}
+const num=v=>(v!==undefined&&v!==null&&v!==""&&isFinite(+v))?+v:null;
+async function poll(manual){
+ if(T.busy)return;T.busy=true;
+ try{const tx=await esp("/status",true);let d={};try{d=JSON.parse(tx)}catch(e){}
+  T.data=d;T.online=true;S.lastOk=Date.now();
+  const on=d.status!==undefined?(+d.status===1):T.motor;
+  if(on!==T.motor){tick();T.motor=on;if(on)T.motorSince=Date.now();addLog(on?"Motor started":"Motor stopped",on?{start:nowStr()}:{stop:nowStr()})}
+  if(d.power!==undefined){const p=+d.power===1;if(S.pwOk!==p){const prev=S.pwOk;S.pwOk=p;S.pwSince=Date.now();
+   if(prev!==null)addLog(p?"Power restored":"Power cut",p?{rest:nowStr()}:{cut:nowStr()})}}
+  $("term").textContent="Response: "+tx;
+ }catch(e){T.online=false}
+ T.busy=false;protect();sample();render();if(manual)addLog("Manual refresh")}
+async function sendCmd(path,label){
+ try{await esp(path);T.lastCmd=Date.now();await poll();return true}catch(e){toast("Device not reachable. Check IP / Wi-Fi.");T.online=false;render();return false}}
+
+/* ---------- runtime: count only while ESP confirms motor on ---------- */
+function tick(){const now=Date.now(),dt=now-T.lastTick;T.lastTick=now;
+ if(S.runDay!==today()){S.runDay=today();S.runMs=0}
+ if(T.motor&&T.online&&dt<60000){S.totMs+=dt;{const d=T.data,v=[num(d.vr),num(d.vy),num(d.vb)].filter(x=>x!==null),c=num(d.current);if(v.length&&c!==null)S.kwh+=1.732*(v.reduce((a,b)=>a+b)/v.length)*c*0.8/1000*dt/3.6e6}S.runMs+=dt;if(S.armed&&S.sKey)S.sRunMs+=dt}
+ else if(T.motor&&!T.online&&dt<60000){/* keep counting last known state until the 15-min verification */S.runMs+=dt;if(S.armed&&S.sKey)S.sRunMs+=dt}}
+
+/* ---------- smart scheduler ---------- */
+function schedule(){if(!S.smart||!S.armed||missing().length)return;
+ const n=new Date(),sec=n.getHours()*3600+n.getMinutes()*60+n.getSeconds(),a=toSec(S.st),w=winSec();
+ let off=sec-a;if(off<0)off+=86400;let inWin=off<w;
+ const key=(()=>{const d=new Date(n);if(sec<a&&winSec()+a>86400&&inWin)d.setDate(d.getDate()-1);return d.toISOString().slice(0,10)})();
+ if(S.intOn&&S.intDays>1){const days=Math.round((new Date(key)-new Date(S.anchor))/864e5);if(days<0||days%S.intDays!==0)inWin=false}
+ if(inWin&&S.sKey!==key){S.sKey=key;S.sRunMs=0;save()}
+ const need=w*1000,done=S.sKey&&S.sRunMs>=need;
+ let want=inWin&&!done;
+ if(S.resume&&S.sKey&&!done&&!inWin&&S.sKey!==""&&off>=w&&off<w+86400-w&&S.sRunMs>0&&S.sRunMs<need&&S.sKey===key)want=true;
+ if(Date.now()-T.lastCmd<8000||T.busy||!T.online)return;
+ const powerOk=S.pwOk!==false&&!T.alarm;
+ if(want&&!T.motor&&powerOk){T.lastCmd=Date.now();addLog("Smart: start");esp("/on",true).then(()=>poll()).catch(()=>{})}
+ if(!want&&T.motor&&(inWin===false||done)){T.lastCmd=Date.now();addLog("Smart: stop");esp("/off",true).then(()=>poll()).catch(()=>{})}}
+
+/* ---------- render ---------- */
+function setV(id,bar,v){const e=$(id),b=$(bar);if(v===null){e.textContent=t("No data");e.className="v no";b.style.width="0"}
+ else{e.textContent=v;e.className="v";b.style.width=Math.min(100,Math.max(0,(v-150)/1.2))+"%"}}
+function render(){const d=T.data,fresh=T.online&&Date.now()-S.lastOk<20000;
+ const sb=$("sysbar");sb.classList.toggle("ok",T.online);
+ $("sysTxt").firstChild.textContent=T.online?`${t("System online")} · Motor ${t(T.motor?"RUNNING":"STOPPED")} · Power ${t(S.pwOk===false?"OFF":S.pwOk?"OK":"unknown")}`:t("Device offline (Check WiFi) — retrying…");
+ $("sysSub").textContent=t(S.smart?(S.armed?"Smart Mode armed":"Smart Mode not armed"):"Manual control")+(S.lastOk?" · "+t("Last update")+" "+new Date(S.lastOk).toLocaleTimeString():"");
+ $("cName").textContent=S.name;$("cIp").textContent=S.ip;
+ setV("vR","bR",fresh?num(d.vr):null);setV("vY","bY",fresh?num(d.vy):null);setV("vB","bB",fresh?num(d.vb):null);
+ const cur=fresh?num(d.current):null;
+ $("curV").textContent=cur===null?"--":cur.toFixed(1);$("curU").textContent=t(cur===null?"No data":"Amps");
+ $("gArc").style.strokeDashoffset=339-339*Math.min(1,(cur||0)/20);
+ const fa=T.alarm||(fresh&&+d.fault===1?"Fault reported by ESP32":"");$("faultBox").style.display=fa?"block":"none";$("faultTxt").textContent=t(fa)+(T.alarm?" — "+t("motor start blocked"):"");
+ const ms=$("mstat");ms.classList.toggle("on",T.motor);$("mTxt").textContent=t(T.motor?"Motor is RUNNING":"Motor is OFF");
+ $("mSub").textContent=t(T.motor?(S.smart&&S.armed?"Running · Smart Mode":"Running · Manual"):"Ready");
+ const pw=$("pw");pw.className="pw "+(S.pwOk===null?"":S.pwOk?"ok":"cut");
+ $("pwTxt").textContent=t("Mains power:")+" "+t(S.pwOk===null?"unknown":S.pwOk?"Available":"Not available");
+ $("pwSub").textContent=S.pwSince?t(S.pwOk?"Since ":"Cut at ")+new Date(S.pwSince).toLocaleString():"";
+ /* smart section + single start button */
+ $("smartBox").classList.toggle("hide",!S.smart);$("smartHint").textContent=t(S.smart?"Schedule runs motor automatically":"Off: motor follows Start / Stop");
+ const miss=missing(),sb2=$("startBtn");
+ sb2.textContent=t(S.smart?(miss.length?"START (set up first)":S.armed?"SCHEDULE ARMED":"START SCHEDULE"):"START");
+ sb2.disabled=false;sb2.style.opacity=S.smart&&miss.length?.45:1;
+ sb2.classList.toggle("hide",S.smart&&S.armed&&false);
+ rt()}
+function rt(){tick();eng();if(++T.n%10===0)save();$("rtV").textContent=fmtHMS(S.runMs);
+ $("rtCap").textContent=t(T.motor?"Counting · verified with ESP32 every 15 min":"Counting stopped");
+ $("rtBar").style.width=Math.min(100,S.runMs/864e3)+"%"}
+
+/* ---------- events ---------- */
+$("startBtn").onclick=async()=>{
+ if(S.smart){const m=missing();if(m.length){toast("Please fill: "+m.join(", ")+" — or turn Smart Mode off.");return}
+  S.armed=true;S.anchor=today();S.sKey="";S.sRunMs=0;save();addLog("Smart schedule armed");toast("Smart schedule armed",1);render();return}
+ if(T.alarm){toast("Cannot start: "+T.alarm);return}
+ if(await sendCmd("/on")){T.motor=true;addLog("Start pressed",{start:nowStr()});render()}};
+$("stopBtn").onclick=async()=>{S.armed=false;save();if(await sendCmd("/off")){T.motor=false;addLog("Stop pressed",{stop:nowStr()});render()}};
+$("refBtn").onclick=async()=>{const b=$("refBtn");b.classList.remove("spin");void b.offsetWidth;b.classList.add("spin");
+ document.querySelectorAll(".card").forEach(c=>{c.classList.remove("flash");void c.offsetWidth;c.classList.add("flash")});
+ await poll(true);toast(T.online?"Data refreshed":"Refresh failed: device offline",T.online)};
+$("testBtn").onclick=()=>esp($("testSel").value).catch(()=>{});
+$("smartTg").onchange=e=>{S.smart=e.target.checked;if(!S.smart)S.armed=false;save();render();
+ if(S.smart&&missing().length)toast("Complete the Smart Mode settings to enable Start.")};
+$("resume").onchange=e=>{S.resume=e.target.checked;save()};
+$("intTg").onchange=e=>{S.intOn=e.target.checked;smartChanged()};
+$("intDays").oninput=e=>{S.intDays=Math.max(1,parseInt(e.target.value)||1);smartChanged()};
+const open=id=>$(id).classList.add("show");
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>$(b.dataset.close).classList.remove("show"));
+document.querySelectorAll(".mod").forEach(m=>m.addEventListener("mousedown",e=>{if(e.target===m)m.classList.remove("show")}));
+$("setBtn").onclick=()=>{$("sName").value=S.name;$("sIp").value=S.ip;$("sPoll").value=S.poll;$("sUser").value=S.user;$("sPass").value=$("sPass2").value="";const L=S.lim;$("pMin").value=L.minV;$("pMax").value=L.maxV;$("pImb").value=L.imb;$("pDry").value=L.dry;$("pOver").value=L.over;$("pTar").value=L.tariff;$("pSvc").value=L.svc;open("setMod")};
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));t.classList.add("on");["t1","t2","t3"].forEach(i=>$(i).classList.toggle("hide",t.dataset.t!==i))});
+$("saveSet").onclick=()=>{const p=$("sPass").value;if(p&&p!==$("sPass2").value){toast("Passwords do not match");return}
+ if(p&&p.length<4){toast("Password must be at least 4 characters");return}
+ S.name=$("sName").value.trim()||D.name;S.ip=$("sIp").value.trim()||D.ip;S.poll=Math.min(60,Math.max(2,+$("sPoll").value||5));
+ S.user=$("sUser").value.trim()||"admin";if(p)S.pass=p;{const g=(i,d)=>{const n=parseFloat($(i).value);return isNaN(n)?d:n};S.lim={minV:g("pMin",180),maxV:g("pMax",260),imb:g("pImb",15),dry:g("pDry",1.5),over:g("pOver",15),tariff:g("pTar",6),svc:g("pSvc",500)};const L=S.lim;esp(`/config?minv=${L.minV}&maxv=${L.maxV}&imb=${L.imb}&dry=${L.dry}&over=${L.over}`,true).catch(()=>{})}save();render();restartPoll();$("setMod").classList.remove("show");toast("Settings saved",1)};
+$("hisBtn").onclick=()=>{renderLogs();open("hisMod")};
+$("clrBtn").onclick=()=>{if(confirm("Clear all logs?")){S.logs=[];save();renderLogs()}};
+$("csvBtn").onclick=()=>{const h=["Date & Time","Event","Motor start","Motor stop","Power cut","Power restore","R-Volt","Y-Volt","B-Volt","Current (Amp)","Total run time"];
+ const r=S.logs.map(l=>[l.t,l.ev,l.start||"",l.stop||"",l.cut||"",l.rest||"",l.vr,l.vy,l.vb,l.cur,l.run].map(x=>`"${x}"`).join(","));
+ const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([[h.join(","),...r].join("\n")],{type:"text/csv"}));a.download="motor_history.csv";a.click()};
+/* console */
+function conStat(){const d=T.data;$("conStat").textContent=`Device: ${S.name} (${S.ip})\nLink: ${T.online?"Online":"Offline"}   Motor: ${T.motor?"RUNNING":"OFF"}\nPower: ${S.pwOk===null?"unknown":S.pwOk?"OK":"CUT"}   Fault: ${+d.fault===1?"YES":"None"}\nR/Y/B: ${[d.vr,d.vy,d.vb].map(v=>num(v)===null?"--":v).join(" / ")} V   Current: ${num(d.current)===null?"--":d.current} A\nRuntime today: ${fmtHMS(S.runMs)}   Mode: ${S.smart?"Smart":"Manual"}`}
+$("openConsole").onclick=()=>{conStat();open("conMod");$("cmdIn").focus()};
+const out=t=>{const o=$("cmdOut");o.textContent+="\n"+t;o.scrollTop=o.scrollHeight};
+async function runCmd(){const c=$("cmdIn").value.trim().toLowerCase();$("cmdIn").value="";if(!c)return;out("> "+c);
+ try{if(c==="help")out("Commands: status, on, off, hello, check, log, clear");
+ else if(c==="clear")$("cmdOut").textContent="";
+ else if(c==="on")out(await esp("/on",true));else if(c==="off")out(await esp("/off",true));
+ else if(c==="hello")out(await esp("/api/hello",true));else if(c==="status")out(await esp("/status",true));
+ else if(c==="log")out(S.logs.slice(0,5).map(l=>l.t+" "+l.ev).join("\n")||"No logs");
+ else if(c==="check"){const t=Date.now();const r=await esp("/status",true);out("Ping "+(Date.now()-t)+" ms\n"+r)}
+ else out("Unknown command. Type help.")}catch(e){out("Error: device not reachable")}
+ await poll();conStat()}
+$("cmdGo").onclick=runCmd;$("cmdIn").onkeydown=e=>{if(e.key==="Enter")runCmd()};
+
+/* login */
+$("lf").onsubmit=e=>{e.preventDefault();if($("lu").value.trim()===S.user&&$("lp").value===S.pass){S.auth=true;save();$("login").classList.add("hide");$("le").classList.add("hide");start()}else $("le").classList.remove("hide")};
+$("logout").onclick=()=>{S.auth=false;save();location.reload()};
+
+function protect(){const d=T.data,L=S.lim,v=[num(d.vr),num(d.vy),num(d.vb)],vv=v.filter(x=>x!==null),c=num(d.current);let m="";
+ if(T.online&&vv.length){if(vv.some(x=>x<50))m="Phase failure";else if(vv.some(x=>x<L.minV))m="Low voltage";else if(vv.some(x=>x>L.maxV))m="High voltage";else if(vv.length===3&&(Math.max(...vv)-Math.min(...vv))/Math.max(...vv)*100>L.imb)m="Phase imbalance"}
+ if(!m&&T.motor&&c!==null&&Date.now()-T.motorSince>8000){if(c>L.over)m="Overload";else if(c<L.dry)m="Dry run (low current)"}
+ if(m&&m!==T.alarm)addLog("ALARM: "+m);T.alarm=m;
+ if(m&&T.motor&&!T.tripping){T.tripping=1;toast("Motor stopped: "+m);esp("/off",true).then(()=>poll()).catch(()=>{}).finally(()=>T.tripping=0)}}
+function sample(){if(!T.online)return;const d=T.data;T.smp.push([num(d.vr),num(d.vy),num(d.vb),num(d.current)]);if(T.smp.length>120)T.smp.shift();chart()}
+function chart(){const c=$("trend"),x=c.getContext("2d"),w=c.width,h=c.height;x.clearRect(0,0,w,h);x.strokeStyle="#263353";x.lineWidth=1;for(let i=1;i<4;i++){x.beginPath();x.moveTo(0,h*i/4);x.lineTo(w,h*i/4);x.stroke()}
+ [["#ff5a5a",0,300],["#facc15",1,300],["#38bdf8",2,300],["#f5a623",3,25]].forEach(([col,k,mx])=>{x.strokeStyle=col;x.lineWidth=2;x.beginPath();let st=0;T.smp.forEach((s,i)=>{if(s[k]===null){st=0;return}const px=i/119*w,py=h-Math.min(1,s[k]/mx)*h;st?x.lineTo(px,py):x.moveTo(px,py);st=1});x.stroke()})}
+function eng(){$("eKwh").textContent=S.kwh.toFixed(2);$("eCost").textContent="₹"+(S.kwh*S.lim.tariff).toFixed(0);const h=S.totMs/36e5,due=S.lim.svc-(h-S.svcAt);$("eHrs").textContent=h.toFixed(1)+" h";$("eSvc").textContent=due>0?due.toFixed(0)+" "+t("h left"):t("Service due!");$("eSvc").style.color=due>0?"":"var(--rd)"}
+$("svcRst").onclick=()=>{S.svcAt=S.totMs/36e5;save();eng();toast("Service counter reset",1)};
+/* loops */
+let pt=null,started=false;
+function restartPoll(){clearInterval(pt);pt=setInterval(()=>{if(!document.hidden)poll()},S.poll*1000)}
+function start(){if(started)return;started=true;
+ $("smartTg").checked=S.smart;$("resume").checked=S.resume;$("intTg").checked=S.intOn;$("intDays").value=S.intDays;
+ buildT("stBox","st");buildT("enBox","en");$("workV").textContent=toSec(S.st)===toSec(S.en)?"--":fmtHMS(winSec()*1000).slice(0,5).replace(":","h ")+"m";
+ renderLogs();render();poll();restartPoll();
+ setInterval(()=>{rt();schedule()},1000);                       // 1s UI + scheduler
+ setInterval(()=>{if(T.motor)poll()},15*60*1000);               // 15-min motor-state verification for runtime
+ document.addEventListener("visibilitychange",()=>{if(!document.hidden){T.lastTick=Date.now();poll()}}); // instant refresh on reopen
+ window.addEventListener("online",()=>poll())}
+applyLang();
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+if(S.auth){$("login").classList.add("hide");start()}
+</script></body></html>
