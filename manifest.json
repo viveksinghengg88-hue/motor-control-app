@@ -1,6 +1,7 @@
 {
-  "name": "Water Motor Control",
+  "name": "Water Motor Control PWA",
   "short_name": "MotorControl",
+  "description": "Smart 3-Phase Industrial IoT Motor Control System Dashboard",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b1220",
